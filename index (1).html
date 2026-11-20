@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DreamLog — Sleep & Study Productivity Analytics</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-icon" aria-hidden="true">🌙</div>
+      <div>
+        <h1>DreamLog</h1>
+        <p class="subtitle">SnoozeScience Sprint • Sleep &amp; Cognitive Focus Tracker</p>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <button type="button" id="exportPdfBtn" class="btn btn-secondary">📄 Export Wellness Report</button>
+      <button type="button" id="resetDemoBtn" class="btn btn-ghost" title="Restore 21-day sample dataset">Reset 21-Day Demo</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- Top KPI Metrics Strip -->
+    <section class="kpi-grid" aria-label="Key Sleep and Productivity Metrics">
+      <article class="card kpi-card">
+        <span class="kpi-label">Pearson Correlation (r)</span>
+        <div class="kpi-value" id="pearsonValue">--</div>
+        <span class="kpi-badge" id="correlationBadge">Calculating...</span>
+        <small class="kpi-sub" id="sampleConfidenceText">Checking sample size...</small>
+      </article>
+
+      <article class="card kpi-card">
+        <span class="kpi-label">7-Day Sleep Debt</span>
+        <div class="kpi-value" id="sleepDebtValue">--h</div>
+        <span class="kpi-badge neutral" id="sleepDebtBadge">8.0h nightly baseline</span>
+        <small class="kpi-sub" id="avgSleepText">Avg sleep: --h</small>
+      </article>
+
+      <article class="card kpi-card">
+        <span class="kpi-label">Avg Focus Rating</span>
+        <div class="kpi-value" id="avgFocusValue">-- / 5</div>
+        <span class="kpi-badge neutral" id="focusBadge">Study efficiency</span>
+        <small class="kpi-sub" id="avgStudyText">Avg study: --h / day</small>
+      </article>
+
+      <article class="card kpi-card">
+        <span class="kpi-label">7.5h+ Sleep Focus Boost</span>
+        <div class="kpi-value" id="boostValue">--%</div>
+        <span class="kpi-badge neutral" id="boostBadge">Evidence insight</span>
+        <small class="kpi-sub" id="boostDetailText">Comparing &ge;7.5h vs &lt;7.5h sleep</small>
+      </article>
+    </section>
+
+    <!-- Main Two-Column Workspace -->
+    <div class="workspace-grid">
+      <!-- Left Column: Loggers & Optimization -->
+      <div class="left-column">
+        <!-- Combined Daily Sleep & Study Logger -->
+        <section class="card">
+          <div class="card-header">
+            <h2>Log Nightly Sleep &amp; Study Session</h2>
+            <span class="pill">Live Recalculation</span>
+          </div>
+
+          <form id="logForm" class="stack-form">
+            <div class="form-row two-col">
+              <div class="form-group">
+                <label for="logDate">Date</label>
+                <input type="date" id="logDate" required />
+              </div>
+              <div class="form-group">
+                <label for="sleepQuality">Sleep Quality (1–5 Stars)</label>
+                <div class="star-picker" id="starPicker" role="radiogroup" aria-label="Sleep Quality Rating">
+                  <button type="button" class="star-btn" data-value="1" aria-label="1 star">★</button>
+                  <button type="button" class="star-btn" data-value="2" aria-label="2 stars">★</button>
+                  <button type="button" class="star-btn" data-value="3" aria-label="3 stars">★</button>
+                  <button type="button" class="star-btn active" data-value="4" aria-label="4 stars">★</button>
+                  <button type="button" class="star-btn" data-value="5" aria-label="5 stars">★</button>
+                </div>
+                <input type="hidden" id="sleepQuality" value="4" />
+              </div>
+            </div>
+
+            <div class="form-row two-col">
+              <div class="form-group">
+                <label for="bedtime">Bedtime</label>
+                <input type="time" id="bedtime" value="23:30" required />
+              </div>
+              <div class="form-group">
+                <label for="wakeTime">Wake Time</label>
+                <input type="time" id="wakeTime" value="07:30" required />
+              </div>
+            </div>
+
+            <div class="computed-banner">
+              <span>Calculated Sleep Duration:</span>
+              <strong id="previewSleepDuration">8.0 hrs</strong>
+            </div>
+
+            <hr class="divider" />
+
+            <div class="form-row two-col">
+              <div class="form-group">
+                <label for="studyHours">Study Hours Today</label>
+                <input type="number" id="studyHours" step="0.5" min="0" max="16" value="4.5" required />
+              </div>
+              <div class="form-group">
+                <label for="focusRating">Focus Rating (1–5)</label>
+                <select id="focusRating" required>
+                  <option value="1">1 — Foggy / Distracted</option>
+                  <option value="2">2 — Low Focus</option>
+                  <option value="3">3 — Moderate Focus</option>
+                  <option value="4">4 — High Focus</option>
+                  <option value="5" selected>5 — Deep Focus</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="subjects">Subjects Studied</label>
+              <input type="text" id="subjects" placeholder="e.g., Algorithms, Operating Systems" value="Algorithms" required />
+            </div>
+
+            <button type="submit" class="btn btn-primary full-width">Save Log &amp; Update Analytics</button>
+          </form>
+        </section>
+
+        <!-- Weekly Optimization Insights -->
+        <section class="card">
+          <div class="card-header">
+            <h2>Weekly Optimization Insights</h2>
+            <span class="pill amber">Empirical Engine</span>
+          </div>
+          <ul id="insightsList" class="insights-list"></ul>
+        </section>
+
+        <!-- Stretch Feature 1: Optimal Bedtime Recommender (90-Min Cycles) -->
+        <section class="card">
+          <div class="card-header">
+            <h2>90-Min REM Bedtime Recommender</h2>
+            <span class="pill blue">Stretch</span>
+          </div>
+          <p class="card-desc">
+            Calculates optimal bedtimes based on 90-minute sleep cycles (plus ~15 min to fall asleep) so you wake up between cycles rather than in deep slow-wave sleep.
+          </p>
+          <div class="form-row two-col align-end">
+            <div class="form-group">
+              <label for="targetWakeTime">Target Wake Time</label>
+              <input type="time" id="targetWakeTime" value="07:00" />
+            </div>
+            <button type="button" id="calcBedtimeBtn" class="btn btn-secondary">Calculate Bedtimes</button>
+          </div>
+          <div id="bedtimeRecommendations" class="cycle-grid"></div>
+        </section>
+      </div>
+
+      <!-- Right Column: Scatter Plot, Caffeine Half-Life, Exam Preserver & Logs -->
+      <div class="right-column">
+        <!-- Interactive Scatter Plot & OLS Trendline -->
+        <section class="card chart-card">
+          <div class="card-header">
+            <div>
+              <h2>Sleep Duration vs. Study Focus Scatter Plot</h2>
+              <p class="card-desc" id="regressionEquation">Linear trendline (OLS) &amp; latest entry highlight</p>
+            </div>
+            <span class="pill" id="chartPointCount">21 Logs</span>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="sleepFocusChart"></canvas>
+          </div>
+        </section>
+
+        <!-- Stretch Features Row: Caffeine Half-Life & Exam Week Sleep Preserver -->
+        <div class="two-col stretch-grid">
+          <!-- Caffeine Intake Logger & Half-Life -->
+          <section class="card">
+            <div class="card-header">
+              <h2>Caffeine Half-Life</h2>
+              <span class="pill amber">Stretch</span>
+            </div>
+            <p class="card-desc">
+              Tracks intake (5h avg half-life) against your target bedtime to prevent hidden sleep disruption.
+            </p>
+            <div class="form-row two-col">
+              <div class="form-group">
+                <label for="caffeineType">Drink</label>
+                <select id="caffeineType">
+                  <option value="120" selected>Coffee (~120 mg)</option>
+                  <option value="80">Espresso / Shot (~80 mg)</option>
+                  <option value="45">Tea / Matcha (~45 mg)</option>
+                  <option value="150">Energy Drink (~150 mg)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="caffeineTime">Time Consumed</label>
+                <input type="time" id="caffeineTime" value="14:00" />
+              </div>
+            </div>
+            <div class="form-row two-col align-end">
+              <div class="form-group">
+                <label for="caffeineBedtime">Planned Bedtime</label>
+                <input type="time" id="caffeineBedtime" value="23:30" />
+              </div>
+              <button type="button" id="addCaffeineBtn" class="btn btn-secondary">Log Caffeine</button>
+            </div>
+            <div id="caffeineStatus" class="caffeine-status"></div>
+            <div class="chart-wrap small-chart">
+              <canvas id="caffeineChart"></canvas>
+            </div>
+          </section>
+
+          <!-- Exam Week Sleep Preserver -->
+          <section class="card">
+            <div class="card-header">
+              <h2>Exam Week Sleep Preserver</h2>
+              <span class="pill blue">Stretch</span>
+            </div>
+            <p class="card-desc">
+              Generates a protective timetable capping daily study at <strong>8h</strong> and guaranteeing <strong>7h+</strong> of sleep.
+            </p>
+            <div class="form-row two-col">
+              <div class="form-group">
+                <label for="examSubjects">Exam Topics (comma-separated)</label>
+                <input type="text" id="examSubjects" value="Data Structures, Linear Algebra, OS" />
+              </div>
+              <div class="form-group">
+                <label for="examWake">Wake Time</label>
+                <input type="time" id="examWake" value="07:00" />
+              </div>
+            </div>
+            <button type="button" id="generateTimetableBtn" class="btn btn-secondary full-width">Generate Protective Schedule</button>
+            <div id="timetableOutput" class="timetable-list"></div>
+          </section>
+        </div>
+
+        <!-- Recent Logs Table -->
+        <section class="card">
+          <div class="card-header">
+            <h2>Logged Sleep &amp; Study Entries</h2>
+            <span class="pill" id="totalEntriesLabel">21 entries</span>
+          </div>
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Sleep</th>
+                  <th>Quality</th>
+                  <th>Debt vs 8h</th>
+                  <th>Study</th>
+                  <th>Focus</th>
+                  <th>Subjects</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="logsTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <!-- Printable Wellness Report Modal / Print View -->
+  <div id="reportModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="reportTitle">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="reportTitle">Student Sleep &amp; Academic Wellness Report</h2>
+        <div class="modal-actions no-print">
+          <button type="button" id="printReportBtn" class="btn btn-primary">🖨️ Print / Save PDF</button>
+          <button type="button" id="closeReportBtn" class="btn btn-ghost">Close</button>
+        </div>
+      </div>
+      <div id="reportBody" class="report-body"></div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
